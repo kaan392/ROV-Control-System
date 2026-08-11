@@ -1,0 +1,8 @@
+{
+    "network": {
+        "target_ip": "127.0.0.1",
+        "target_port": 5032,
+        "local_port": null,
+        "use_simulation": false
+    }
+}
