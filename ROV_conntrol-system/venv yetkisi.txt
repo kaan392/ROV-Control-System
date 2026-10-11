@@ -1,0 +1,6 @@
+pip install -r requirements.txt
+
+cd ~/Desktop/"Diagnostic Engine v2.0"
+python3 -m venv venv
+source venv/bin/activate
+python main.py
