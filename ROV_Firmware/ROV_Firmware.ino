@@ -24,12 +24,12 @@ constexpr uint8_t THRUSTER_COUNT = 6;
 }
 
 namespace MotorDirection {
-constexpr int8_t INVERT_M1 = -1; 
-constexpr int8_t INVERT_M2 = -1; 
-constexpr int8_t INVERT_M3 =  1; 
-constexpr int8_t INVERT_M4 =  1; 
-constexpr int8_t INVERT_M5 = -1; 
-constexpr int8_t INVERT_M6 = -1; 
+constexpr int8_t INVERT_M1 = -1;
+constexpr int8_t INVERT_M2 = -1;
+constexpr int8_t INVERT_M3 =  1;
+constexpr int8_t INVERT_M4 =  1;
+constexpr int8_t INVERT_M5 = -1;
+constexpr int8_t INVERT_M6 = -1;
 }
 
 namespace Network {
@@ -48,7 +48,7 @@ constexpr uint16_t PWM_MIN     = 1000;
 constexpr uint16_t PWM_NEUTRAL = 1500;
 constexpr uint16_t PWM_MAX     = 2000;
 
-constexpr uint32_t INIT_DELAY_MS = 2000; 
+constexpr uint32_t INIT_DELAY_MS = 2000;
 }
 
 namespace Motor {
@@ -96,12 +96,12 @@ inline uint16_t mapPercentToPWM(int8_t percentage, int8_t minPercent, int8_t max
 }
 
 struct MotorOutputs {
-  int8_t m1; 
-  int8_t m2; 
-  int8_t m3; 
-  int8_t m4; 
-  int8_t m5; 
-  int8_t m6; 
+  int8_t m1;
+  int8_t m2;
+  int8_t m3;
+  int8_t m4;
+  int8_t m5;
+  int8_t m6;
 };
 
 struct ControlCommands {
@@ -166,46 +166,40 @@ class MotionController {
     MotionController() {}
 
     MotorOutputs calculateOutputs(int8_t f, int8_t s, int8_t y, int8_t v) {
-      int8_t forward = Utilities::applyDeadzone(f, Config::Motor::DEADZONE);
-      int8_t strafe  = Utilities::applyDeadzone(s, Config::Motor::DEADZONE);
-      int8_t yaw      = Utilities::applyDeadzone(y, Config::Motor::DEADZONE);
-      int8_t vert     = Utilities::applyDeadzone(v, Config::Motor::DEADZONE);
+      // Hesaplamalar int ile yapılır (int8_t taşmasını önlemek için),
+      // sınırlandırma en sonda uygulanır.
+      int forward = Utilities::applyDeadzone(f, Config::Motor::DEADZONE);
+      int strafe  = Utilities::applyDeadzone(s, Config::Motor::DEADZONE);
+      int yaw     = Utilities::applyDeadzone(y, Config::Motor::DEADZONE);
+      int vert    = Utilities::applyDeadzone(v, Config::Motor::DEADZONE);
 
-      MotorOutputs outputs = {0, 0, 0, 0, 0, 0};
-
-      // Dikey Eksen (M5 ve M6)
-      outputs.m5 = vert;
-      outputs.m6 = vert;
+      int m1 = 0, m2 = 0, m3 = 0, m4 = 0;
 
       // İleri/Geri ve Dönüş (Diferansiyel Miksaj)
       if (strafe == 0) {
-        outputs.m1 = forward - yaw;
-        outputs.m2 = forward + yaw;
-        outputs.m3 = forward + yaw;
-        outputs.m4 = forward - yaw;
+        m1 = forward - yaw;
+        m2 = forward + yaw;
+        m3 = forward + yaw;
+        m4 = forward - yaw;
       } else if (forward == 0 && yaw == 0) {
         // Yanal Kayma / Strafe
-        outputs.m1 = -strafe;
-        outputs.m2 = strafe;
-        outputs.m3 = strafe;
-        outputs.m4 = -strafe;
+        m1 = -strafe;
+        m2 = strafe;
+        m3 = strafe;
+        m4 = -strafe;
       }
 
-      // Yazılımsal Invert
-      outputs.m1 *= Config::MotorDirection::INVERT_M1;
-      outputs.m2 *= Config::MotorDirection::INVERT_M2;
-      outputs.m3 *= Config::MotorDirection::INVERT_M3;
-      outputs.m4 *= Config::MotorDirection::INVERT_M4;
-      outputs.m5 *= Config::MotorDirection::INVERT_M5;
-      outputs.m6 *= Config::MotorDirection::INVERT_M6;
+      MotorOutputs outputs;
 
-      // Sınırlandırma (%-100 ile %100 arası)
-      outputs.m1 = Utilities::clamp(outputs.m1, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-      outputs.m2 = Utilities::clamp(outputs.m2, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-      outputs.m3 = Utilities::clamp(outputs.m3, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-      outputs.m4 = Utilities::clamp(outputs.m4, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-      outputs.m5 = Utilities::clamp(outputs.m5, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-      outputs.m6 = Utilities::clamp(outputs.m6, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
+      // Yazılımsal Invert + Sınırlandırma (%-100 ile %100 arası)
+      outputs.m1 = (int8_t)Utilities::clamp(m1 * Config::MotorDirection::INVERT_M1, -100, 100);
+      outputs.m2 = (int8_t)Utilities::clamp(m2 * Config::MotorDirection::INVERT_M2, -100, 100);
+      outputs.m3 = (int8_t)Utilities::clamp(m3 * Config::MotorDirection::INVERT_M3, -100, 100);
+      outputs.m4 = (int8_t)Utilities::clamp(m4 * Config::MotorDirection::INVERT_M4, -100, 100);
+
+      // Dikey Eksen (M5 ve M6)
+      outputs.m5 = (int8_t)Utilities::clamp(vert * Config::MotorDirection::INVERT_M5, -100, 100);
+      outputs.m6 = (int8_t)Utilities::clamp(vert * Config::MotorDirection::INVERT_M6, -100, 100);
 
       return outputs;
     }
@@ -227,12 +221,12 @@ class PacketParser {
       }
 
       int f = 0, s = 0, y = 0, v = 0, e = 0;
-      // Python ControlPacket formatına tam uyumlu sscanf ayrıştırma
-      if (sscanf(buffer, "F:%d,S:%d,Y:%d,V:%d,E:%d", &f, &s, &y, &v, &e) >= 4) {
-        cmds.forward  = Utilities::clamp((int8_t)f, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-        cmds.strafe   = Utilities::clamp((int8_t)s, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-        cmds.yaw      = Utilities::clamp((int8_t)y, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
-        cmds.vertical = Utilities::clamp((int8_t)v, Config::Motor::PERCENT_MIN, Config::Motor::PERCENT_MAX);
+      // Python ControlPacket formatı: beş alanın tamamı zorunlu
+      if (sscanf(buffer, "F:%d,S:%d,Y:%d,V:%d,E:%d", &f, &s, &y, &v, &e) == 5) {
+        cmds.forward  = (int8_t)Utilities::clamp(f, -100, 100);
+        cmds.strafe   = (int8_t)Utilities::clamp(s, -100, 100);
+        cmds.yaw      = (int8_t)Utilities::clamp(y, -100, 100);
+        cmds.vertical = (int8_t)Utilities::clamp(v, -100, 100);
         cmds.emergencyStop = (e > 0);
         cmds.isValid  = true;
       }
@@ -276,15 +270,18 @@ class EthernetReceiver {
 };
 
 ESCController     escController;
-MotionController   motionController;
-PacketParser       packetParser;
-EthernetReceiver   ethernetReceiver;
+MotionController  motionController;
+PacketParser      packetParser;
+EthernetReceiver  ethernetReceiver;
 
 char packetBuffer[Config::Network::BUFFER_SIZE];
 unsigned long lastPacketTime = 0;
 constexpr unsigned long WATCHDOG_TIMEOUT_MS = 1000;
 
 void setup() {
+  // Mega'da D53 (SS) çıkış modunda olmalı, aksi halde SPI master modu bozulabilir
+  pinMode(53, OUTPUT);
+
   if (Config::Debug::ENABLE_DEBUG) {
     Serial.begin(Config::Debug::BAUDRATE);
     while (!Serial && millis() < 3000);
@@ -300,11 +297,12 @@ void loop() {
   uint16_t bytesRead = ethernetReceiver.readPacket(packetBuffer, Config::Network::BUFFER_SIZE);
 
   if (bytesRead > 0) {
-    lastPacketTime = millis();
-
     ControlCommands cmds = packetParser.parsePacket(packetBuffer, bytesRead);
 
     if (cmds.isValid) {
+      // Watchdog sadece geçerli pakette yenilenir
+      lastPacketTime = millis();
+
       if (cmds.emergencyStop) {
         escController.stopAll();
       } else {
